@@ -36,8 +36,12 @@ pip install -r requirements.txt
 ```bash
 copy .env.example .env
 ```
+5. Inicializar la base de datos:
+```bash
+python init_db.py
+```
 
-5. Ejecutar la aplicación:
+6. Ejecutar la aplicación:
 ```bash
 python app.py
 ```
