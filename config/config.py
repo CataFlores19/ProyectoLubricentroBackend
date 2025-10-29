@@ -7,6 +7,9 @@ class Config:
     """Configuración básica"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'clave-secreta-para-desarrollo'
     
+    # Configuración JWT
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key-super-segura-cambiar-en-produccion'
+    
     # Base de datos - SQLite por defecto, PostgreSQL si está configurado
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if DATABASE_URL:
