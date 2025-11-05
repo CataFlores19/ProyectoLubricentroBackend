@@ -65,11 +65,11 @@ def init_database():
         }), 500
 
 
-@bp.route('/api/init-data', methods=['POST'])
+@bp.route('/api/init-data', methods=['GET', 'POST'])
 def init_data():
     """
     Endpoint para inicializar datos de prueba (roles y usuario admin)
-    POST /api/init-data
+    GET/POST /api/init-data
     NOTA: Este endpoint es público pero debería usarse solo una vez
     """
     try:
