@@ -8,13 +8,28 @@ from app.models import Role, User, Client, Vehicle, WorkOrder
 # Crear instancia de la aplicación
 app = create_app()
 
-# Crear tablas si no existen (para producción con Neon)
-with app.app_context():
+# Endpoint para inicializar la base de datos (llamar una vez después del deploy)
+@app.route('/init-db', methods=['GET', 'POST'])
+def init_database():
     try:
         db.create_all()
-        print("✓ Tablas creadas/verificadas exitosamente")
+        return {"message": "Base de datos inicializada correctamente", "success": True}, 200
     except Exception as e:
-        print(f"⚠ Error al crear tablas: {e}")
+        return {"message": f"Error al inicializar: {str(e)}", "success": False}, 500
+
+# Endpoint de prueba para verificar que la API funciona
+@app.route('/')
+def home():
+    return {
+        "message": "API Lubricentro funcionando correctamente",
+        "status": "online",
+        "endpoints": {
+            "auth": "/api/auth/login, /api/auth/register",
+            "roles": "/api/roles",
+            "users": "/api/users",
+            "init": "/init-db (llamar una vez para crear tablas)"
+        }
+    }, 200
 
 if __name__ == '__main__':
     app.run(debug=True)
