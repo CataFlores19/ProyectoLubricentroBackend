@@ -13,3 +13,7 @@ env/
 .vscode/
 *.log
 migrations/
+test_config.py
+SOLUCION_*.md
+GUIA_*.md
+DEPLOY_*.md

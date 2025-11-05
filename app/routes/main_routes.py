@@ -22,7 +22,36 @@ bp = Blueprint('main', __name__)
 @bp.route('/')
 def home():
     """Ruta principal"""
-    return jsonify({'message': 'Bienvenido a la API del Lubricentro'})
+    return jsonify({
+        'message': 'API Lubricentro funcionando correctamente',
+        'status': 'online',
+        'version': '1.0.0',
+        'endpoints': {
+            'auth': '/api/auth/login',
+            'roles': '/api/roles',
+            'users': '/api/users',
+            'clients': '/api/clients',
+            'vehicles': '/api/vehicles',
+            'work_orders': '/api/work-orders',
+            'init_database': '/api/init-db'
+        }
+    })
+
+
+@bp.route('/api/init-db', methods=['GET', 'POST'])
+def init_database():
+    """Endpoint para inicializar la base de datos (llamar una vez después del deploy)"""
+    try:
+        db.create_all()
+        return jsonify({
+            "message": "Base de datos inicializada correctamente", 
+            "success": True
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "message": f"Error al inicializar: {str(e)}", 
+            "success": False
+        }), 500
 
 
 # ========================================

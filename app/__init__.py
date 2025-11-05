@@ -21,6 +21,10 @@ def create_app():
     CORS(app)
     jwt.init_app(app)
     
+    # Importar modelos dentro del contexto de la app para evitar importaciones circulares
+    with app.app_context():
+        from app.models import Role, User, Client, Vehicle, WorkOrder
+    
     # Registrar blueprints
     from app.routes import main_routes
     app.register_blueprint(main_routes.bp)
