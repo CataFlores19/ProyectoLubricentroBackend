@@ -27,13 +27,24 @@ def home():
         'status': 'online',
         'version': '1.0.0',
         'endpoints': {
-            'auth': '/api/auth/login',
-            'roles': '/api/roles',
-            'users': '/api/users',
-            'clients': '/api/clients',
-            'vehicles': '/api/vehicles',
-            'work_orders': '/api/work-orders',
-            'init_database': '/api/init-db'
+            'home': '/',
+            'init_database': '/api/init-db (GET/POST)',
+            'init_data': '/api/init-data (POST) - Crear roles y usuario de prueba',
+            'register': '/api/auth/register (POST) - Registro público',
+            'login': '/api/auth/login (POST)',
+            'me': '/api/auth/me (GET) - Requiere token',
+            'roles': '/api/roles (GET) - Requiere token',
+            'users': '/api/users (GET/POST) - Requiere token',
+            'clients': '/api/clients (GET/POST) - Requiere token',
+            'vehicles': '/api/vehicles (GET/POST) - Requiere token',
+            'work_orders': '/api/work-orders (GET/POST) - Requiere token'
+        },
+        'info': {
+            'first_time_setup': 'Llama a /api/init-data para crear roles y usuario de prueba',
+            'test_credentials': {
+                'rut': '12345678-9',
+                'password': 'password123'
+            }
         }
     })
 
@@ -54,8 +65,170 @@ def init_database():
         }), 500
 
 
+@bp.route('/api/init-data', methods=['POST'])
+def init_data():
+    """
+    Endpoint para inicializar datos de prueba (roles y usuario admin)
+    POST /api/init-data
+    NOTA: Este endpoint es público pero debería usarse solo una vez
+    """
+    try:
+        # Crear roles si no existen
+        roles_created = []
+        role_names = ['Administrador', 'Mecánico', 'Recepcionista']
+        
+        for role_name in role_names:
+            existing_role = Role.query.filter_by(Name=role_name).first()
+            if not existing_role:
+                new_role = Role(Name=role_name)
+                db.session.add(new_role)
+                roles_created.append(role_name)
+        
+        db.session.commit()
+        
+        # Crear usuario de prueba si no existe
+        user_created = False
+        test_rut = '12345678-9'
+        existing_user = User.query.filter_by(RUN=test_rut).first()
+        
+        if not existing_user:
+            # Obtener el rol de Administrador
+            admin_role = Role.query.filter_by(Name='Administrador').first()
+            
+            test_user = User(
+                RUN=test_rut,
+                Email='admin@lubricentro.com',
+                FirstName='Administrador',
+                LastName='Sistema',
+                Password=generate_password_hash('password123'),
+                Phone='+56912345678',
+                RoleID=admin_role.ID if admin_role else 1
+            )
+            
+            db.session.add(test_user)
+            db.session.commit()
+            user_created = True
+        
+        return jsonify({
+            "success": True,
+            "message": "Datos inicializados correctamente",
+            "roles_created": roles_created if roles_created else "Ya existían",
+            "user_created": user_created,
+            "test_credentials": {
+                "rut": "12345678-9",
+                "password": "password123",
+                "email": "admin@lubricentro.com"
+            } if user_created else "Usuario ya existe"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": f"Error al inicializar datos: {str(e)}"
+        }), 500
+
+
 # ========================================
 # RUTAS DE AUTENTICACIÓN
+# ========================================
+
+@bp.route('/api/auth/register', methods=['POST'])
+def register():
+    """
+    Endpoint de registro público - Crear nuevo usuario
+    POST /api/auth/register
+    Body: {
+        "rut": "12345678-9",
+        "email": "usuario@example.com",
+        "firstName": "Juan",
+        "lastName": "Pérez",
+        "password": "password123",
+        "phone": "+56912345678",
+        "roleId": 2
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        required_fields = ['rut', 'email', 'firstName', 'lastName', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'El campo {field} es obligatorio'
+                }), 400
+        
+        # Verificar si el RUT ya existe
+        existing_user_run = User.query.filter_by(RUN=data['rut']).first()
+        if existing_user_run:
+            return jsonify({
+                'success': False,
+                'error': 'Ya existe un usuario con ese RUT'
+            }), 400
+        
+        # Verificar si el Email ya existe
+        existing_user_email = User.query.filter_by(Email=data['email']).first()
+        if existing_user_email:
+            return jsonify({
+                'success': False,
+                'error': 'Ya existe un usuario con ese Email'
+            }), 400
+        
+        # Si no se especifica rol, asignar "Recepcionista" por defecto
+        role_id = data.get('roleId')
+        if not role_id:
+            recepcionista_role = Role.query.filter_by(Name='Recepcionista').first()
+            role_id = recepcionista_role.ID if recepcionista_role else 3
+        
+        # Crear nuevo usuario con password hasheado
+        new_user = User(
+            RUN=data['rut'],
+            Email=data['email'],
+            FirstName=data['firstName'],
+            LastName=data['lastName'],
+            Password=generate_password_hash(data['password']),
+            Phone=data.get('phone'),
+            RoleID=role_id
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        # Crear token para el nuevo usuario
+        access_token = create_access_token(identity=str(new_user.ID))
+        
+        # Obtener información del rol
+        role = Role.query.get(role_id)
+        role_name = role.Name if role else None
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuario registrado exitosamente',
+            'token': access_token,
+            'user': {
+                'id': new_user.ID,
+                'rut': new_user.RUN,
+                'email': new_user.Email,
+                'firstName': new_user.FirstName,
+                'lastName': new_user.LastName,
+                'phone': new_user.Phone,
+                'roleId': new_user.RoleID,
+                'roleName': role_name
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ========================================
+# RUTAS DE AUTENTICACIÓN CON TOKEN
 # ========================================
 
 @bp.route('/api/auth/login', methods=['POST'])
