@@ -30,6 +30,7 @@ def home():
             'home': '/',
             'init_database': '/api/init-db (GET/POST)',
             'init_data': '/api/init-data (POST) - Crear roles y usuario de prueba',
+            'reset_database': '/api/reset-db (POST) - ⚠️ RESETEA completamente la BD',
             'register': '/api/auth/register (POST) - Registro público',
             'login': '/api/auth/login (POST)',
             'me': '/api/auth/me (GET) - Requiere token',
@@ -126,6 +127,67 @@ def init_data():
         return jsonify({
             "success": False,
             "error": f"Error al inicializar datos: {str(e)}"
+        }), 500
+
+
+@bp.route('/api/reset-db', methods=['POST'])
+def reset_database():
+    """
+    Endpoint para resetear completamente la base de datos
+    POST /api/reset-db
+    ⚠️ ADVERTENCIA: Esta operación eliminará TODOS los datos existentes
+    """
+    try:
+        # Eliminar todas las tablas
+        db.drop_all()
+        
+        # Recrear todas las tablas
+        db.create_all()
+        
+        # Crear roles por defecto
+        admin_role = Role(Name='Administrador')
+        mechanic_role = Role(Name='Mecánico')
+        receptionist_role = Role(Name='Recepcionista')
+        
+        db.session.add(admin_role)
+        db.session.add(mechanic_role)
+        db.session.add(receptionist_role)
+        db.session.commit()
+        
+        # Crear usuario de prueba
+        test_user = User(
+            RUN='12345678-9',
+            Email='test@lubricentro.com',
+            FirstName='Usuario',
+            LastName='Prueba',
+            Password=generate_password_hash('password123'),
+            Phone='+56912345678',
+            RoleID=mechanic_role.ID
+        )
+        
+        db.session.add(test_user)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Base de datos reseteada exitosamente",
+            "info": {
+                "tables_created": ["roles", "users", "clients", "vehicles", "work_orders"],
+                "roles_created": ["Administrador", "Mecánico", "Recepcionista"],
+                "test_user": {
+                    "rut": "12345678-9",
+                    "email": "test@lubricentro.com",
+                    "password": "password123",
+                    "role": "Mecánico"
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": f"Error al resetear la base de datos: {str(e)}"
         }), 500
 
 
