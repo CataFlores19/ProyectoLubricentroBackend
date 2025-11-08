@@ -30,7 +30,7 @@ def home():
             'home': '/',
             'init_database': '/api/init-db (GET/POST)',
             'init_data': '/api/init-data (POST) - Crear roles y usuario de prueba',
-            'reset_database': '/api/reset-db (POST) - ⚠️ RESETEA completamente la BD',
+            'reset_database': '/api/reset-db (GET) - ⚠️ RESETEA completamente la BD',
             'register': '/api/auth/register (POST) - Registro público',
             'login': '/api/auth/login (POST)',
             'me': '/api/auth/me (GET) - Requiere token',
@@ -130,11 +130,11 @@ def init_data():
         }), 500
 
 
-@bp.route('/api/reset-db', methods=['POST'])
+@bp.route('/api/reset-db', methods=['GET'])
 def reset_database():
     """
     Endpoint para resetear completamente la base de datos
-    POST /api/reset-db
+    GET /api/reset-db
     ⚠️ ADVERTENCIA: Esta operación eliminará TODOS los datos existentes
     """
     try:
